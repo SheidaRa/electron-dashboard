@@ -1,15 +1,11 @@
 import React, { useEffect } from "react";
-import TopBar from "./components/TopBar";
-import Sidebar from "./components/Sidebar";
-import PipelineConfig from "./components/PipelineConfig";
-import MetricsSidebar from "./components/MetricsSidebar";
-import EventLog from "./components/EventLog";
+import TopBar from "./TopBar.jsx"
+import Sidebar from "./Sidebar.jsx";
+import PipelineConfig from "./PipelineConfig.jsx";
+import MetricsSidebar from "./MetricsSidebar.jsx";
+import EventLog from "./EventLog.jsx";
 
 export default function App() {
-  useEffect(() => {
-    // Initialize Mermaid.js
-    window.mermaid.initialize({ startOnLoad: true });
-  }, []);
 
   return (
     <div className="min-h-screen bg-gray-100 text-gray-900 flex flex-col">
