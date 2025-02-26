@@ -13,7 +13,7 @@
   },
   "devDependencies": {
     "@babel/core": "^7.24.7",
-    "@babel/preset-react": "^7.24.7",
+    "@babel/preset-react": "^7.26.3",
     "@electron-forge/cli": "^7.4.0",
     "@electron-forge/maker-deb": "^7.4.0",
     "@electron-forge/maker-rpm": "^7.4.0",
@@ -25,9 +25,9 @@
     "@electron/fuses": "^1.8.0",
     "@vercel/webpack-asset-relocator-loader": "1.7.3",
     "autoprefixer": "^10.4.19",
-    "babel-loader": "^9.1.3",
+    "babel-loader": "^9.2.1",
     "css-loader": "^6.0.0",
-    "electron": "31.1.0",
+    "electron": "^31.1.0",
     "node-loader": "^2.0.0",
     "postcss": "^8.4.39",
     "postcss-loader": "^8.1.1",
@@ -35,17 +35,24 @@
     "tailwindcss": "^3.4.4"
   },
   "keywords": [],
-  "author": {
-    "name": "techbret",
-    "email": "bret@techbret.com"
-  },
+  "author": "techbret <bret@techbret.com>",
   "license": "MIT",
   "dependencies": {
     "@tailwindcss/aspect-ratio": "^0.4.2",
     "@tailwindcss/forms": "^0.5.7",
     "@tailwindcss/typography": "^0.5.13",
     "electron-squirrel-startup": "^1.0.1",
+    "mermaid": "^11.4.1",
     "react": "^18.3.1",
     "react-dom": "^18.3.1"
-  }
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/SheidaRa/electron-dashboard.git"
+  },
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/SheidaRa/electron-dashboard/issues"
+  },
+  "homepage": "https://github.com/SheidaRa/electron-dashboard#readme"
 }
