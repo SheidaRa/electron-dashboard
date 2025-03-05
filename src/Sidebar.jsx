@@ -1,7 +1,20 @@
 import React from "react";
+import { useState, useEffect } from 'react';
 
 export default function Sidebar() {
-  const signals = ["Signal 1", "Signal 2", "Signal 3", "Signal 4"];
+  const [signals, setSignals] = useState([]);
+
+  useEffect(() => {
+    fetch('http://localhost:1205/signals')
+        .then(response => response.json())
+        .then(data => {
+            console.log('Data:', data);
+            setSignals(data);
+        })
+        .catch(error => console.error('Erreur de récupération:', error));
+  }, []);
+
+
   const pipelines = ["Pipeline A", "Pipeline B"];
 
   return (
@@ -11,7 +24,7 @@ export default function Sidebar() {
         {signals.map((signal, index) => (
           <li key={index} className="flex items-center space-x-2">
             <input type="radio" name="signal" className="form-radio" />
-            <span>{signal}</span>
+            <span>{signal.title}</span>
           </li>
         ))}
       </ul>
