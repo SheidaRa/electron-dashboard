@@ -1,5 +1,6 @@
-import React from "react";
 import MermaidDiagram from "./MermaidDiagram.jsx";
+import React, { useState, useEffect } from "react";
+
 
 export default function PipelineConfig() {
   return (
