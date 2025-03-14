@@ -7,7 +7,7 @@ export default function PipelineConfig() {
     <div className="flex-1 p-4">
       {/* <h3 className="text-xl font-semibold">Pipeline Configuration</h3> */}
       <div className="bg-white shadow-md h-full flex justify-center items-center border rounded-lg">
-        <div className="w-full">
+        <div className="w-full h-full">
           {/* graph TD;
           A[Start] --> B{Decision};
           B -->|Yes| C[Process 1];

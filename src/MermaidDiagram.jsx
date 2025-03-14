@@ -113,8 +113,8 @@ export default function MermaidDiagram() {
   }, [graphDefinition]);
 
   return (
-    <div className="mermaid-container" style={{ }}>
-      <div ref={mermaidRef} id="mermaid-diagram-container"></div>
+    <div className="mermaid-container h-full" style={{ }}>
+      <div ref={mermaidRef} id="mermaid-diagram-container" className="h-full"></div>
     </div>
   );
 }
