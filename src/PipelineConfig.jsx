@@ -2,7 +2,7 @@ import MermaidDiagram from "./MermaidDiagram.jsx";
 import React, { useState, useEffect } from "react";
 
 
-export default function PipelineConfig() {
+export default function PipelineConfig({ graphDefinition, setGraphDefinition}) {
   return (
     <div className="flex-1 p-4">
       {/* <h3 className="text-xl font-semibold">Pipeline Configuration</h3> */}
@@ -14,7 +14,7 @@ export default function PipelineConfig() {
           B -->|No| D[Process 2];
           C --> E[End];
           D --> E; */}
-          <MermaidDiagram />
+          <MermaidDiagram graphDefinition={graphDefinition} setGraphDefinition={setGraphDefinition} />
         </div>
       </div>
     </div>

@@ -49,23 +49,23 @@
 // }
 
 
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef } from "react";
 import mermaid from "mermaid";
 import svgPanZoom from "svg-pan-zoom";
 
-export default function MermaidDiagram() {
-  const mermaidRef = useRef(null);
-  const [graphDefinition, setGraphDefinition] = useState("");
+export function fetchGraphData(setGraphDefinition) {
+  fetch("http://localhost:1205/graph")
+    .then((response) => response.text())
+    .then((data) => {
+      console.log("Fetched Mermaid Graph Data:", data);
+      setGraphDefinition(data);
+    })
+    .catch((error) => console.error("Error fetching data:", error));
+}
 
-  useEffect(() => {
-    fetch("http://localhost:1205/graph")
-      .then((response) => response.text())
-      .then((data) => {
-        console.log("Fetched Mermaid Graph Data:", data);
-        setGraphDefinition(data);
-      })
-      .catch((error) => console.error("Error fetching data:", error));
-  }, []);
+export default function MermaidDiagram({graphDefinition}) {
+  const mermaidRef = useRef(null);
+  // const [graphDefinition, setGraphDefinition] = useState("");
 
   useEffect(() => {
     mermaid.initialize({
@@ -78,6 +78,11 @@ export default function MermaidDiagram() {
       },
       logLevel: "debug",
     });
+
+    if (mermaidRef.current && !graphDefinition) {
+      mermaidRef.current.innerHTML = '';
+      return;
+    }
 
     if (mermaidRef.current && graphDefinition) {
       mermaid.render("mermaid-diagram", graphDefinition)
