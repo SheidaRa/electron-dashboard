@@ -60,7 +60,20 @@ app.get('/graph', (req, res) => {
 
 // dummy signals route
 app.get('/signals', (req, res) => {
-    const filePath = path.resolve(__dirname, '../dummy.json');
+    const filePath = path.resolve(__dirname, '../dummyFiles/signals.json');
+    console.log(filePath);
+    fs.readFile(filePath, 'utf8', (err, data) => {
+        if (err) {
+            res.status(500).json({ error: "Error" });
+            return;
+        }
+        res.json(JSON.parse(data));
+    });
+});
+
+// dummy pipelines
+app.get('/pipelines', (req, res) => {
+    const filePath = path.resolve(__dirname, '../dummyFiles/pipelines.json');
     console.log(filePath);
     fs.readFile(filePath, 'utf8', (err, data) => {
         if (err) {

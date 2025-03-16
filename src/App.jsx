@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from "react";
-import TopBar from "./TopBar.jsx";
-import Sidebar from "./Sidebar.jsx";
-import PipelineConfig from "./PipelineConfig.jsx";
-import MetricsSidebar from "./MetricsSidebar.jsx";
-import EventLog from "./EventLog.jsx";
+import TopBar from "./components/TopBar.jsx";
+import Sidebar from "./components/Sidebar.jsx";
+import PipelineConfig from "./components/PipelineConfig.jsx";
+import MetricsSidebar from "./components/MetricsSidebar.jsx";
+import EventLog from "./components/EventLog.jsx";
 
 export default function App() {
 

@@ -2,18 +2,28 @@ import React, { useState, useEffect } from "react";
 
 export default function Sidebar() {
   const [signals, setSignals] = useState([]);
+  const [pipelines, setPipelines] = useState([]);
 
   useEffect(() => {
     fetch('http://localhost:1205/signals')
       .then(response => response.json())
       .then(data => {
-        console.log('Data:', data);
+        console.log('Signals Data:', data);
         setSignals(data);
       })
-      .catch(error => console.error('Error fetching data:', error));
+      .catch(error => console.error('Error fetching signals data:', error));
+    fetch('http://localhost:1205/pipelines')
+    .then(response => response.json())
+    .then(data => {
+      console.log('Pipelines Data:', data);
+      setPipelines(data);
+    })
+    .catch(error => console.error('Error fetching pipelines data:', error))
   }, []);
 
-  const pipelines = ["Pipeline A", "Pipeline B", "Pipeline C", "Pipeline D"];
+  useEffect(() => {
+
+  }, [])
 
   return (
     <div className="w-64 bg-white p-4 shadow-lg rounded-lg border">
@@ -40,7 +50,7 @@ export default function Sidebar() {
             <li key={index} className="flex items-center space-x-2">
               <input type="radio" name="pipeline" className="form-radio text-gray-600" />
               <span className="flex-grow ml-2 text-gray-700 bg-gray-100 rounded-md px-2 py-1 text-sm">
-                {pipeline}
+                {pipeline.title}
               </span>
             </li>
           ))}
