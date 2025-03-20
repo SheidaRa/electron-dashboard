@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import logo from "../assets/logo.png"
 
 export default function Sidebar() {
   const [signals, setSignals] = useState([]);
@@ -23,9 +24,9 @@ export default function Sidebar() {
 
   return (
     <div className="w-64 bg-white p-4 shadow-lg rounded-lg border">
-
+      <img src={logo} alt="Blackrock Neurotech Logo" className="" />
       {/* Signal Source */}
-      <div>
+      <div className="mt-4">
         <h3 className="text-sm font-semibold text-blue-700 uppercase">Active Signal Sources</h3>
         <ul className="space-y-2 mt-2">
           {signals.map((signal, index) => (

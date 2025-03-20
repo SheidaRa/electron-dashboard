@@ -9,6 +9,10 @@ module.exports = [
     use: "node-loader",
   },
   {
+    test: /\.(png|jpe?g|gif|svg)$/i,
+    type: 'asset/resource'
+  },
+  {
     test: /[/\\]node_modules[/\\].+\.(m?js|node)$/,
     parser: { amd: false },
     use: {
