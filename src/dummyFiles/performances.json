@@ -1,0 +1,26 @@
+[
+    {
+        "title": "Total Runtime",
+        "value": "0.05 seconds"
+    },
+    {
+        "title": "Accuracy",
+        "value": "91.4%"
+    },
+    {
+        "title": "Precision",
+        "value": "88.5%"
+    },
+    {
+        "title": "F1 Score",
+        "value": "90.2%"
+    },
+    {
+        "title": "FPR",
+        "value": "3.2%"
+    },
+    {
+        "title": "FNR",
+        "value": "4.7%"
+    }
+]

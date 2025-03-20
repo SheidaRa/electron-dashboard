@@ -2,9 +2,9 @@ import MermaidDiagram from "./MermaidDiagram.jsx";
 import React, { useState, useEffect } from "react";
 
 
-export default function PipelineConfig({ graphDefinition, setGraphDefinition}) {
+export default function PipelineConfig({ graphDefinition, setGraphDefinition }) {
   return (
-    <div className="flex-1 p-4">
+    <div className="flex-1">
       {/* <h3 className="text-xl font-semibold">Pipeline Configuration</h3> */}
       <div className="bg-white shadow-md h-full flex justify-center items-center border rounded-lg">
         <div className="w-full h-full">

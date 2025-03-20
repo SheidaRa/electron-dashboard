@@ -11,13 +11,13 @@ app.use(cors());
 
 
 const WORKING_DIRECTORY = path.resolve(__dirname, "../../../../../brnbci");
-const GRAPH_FILE_PATH = path.join(__dirname, "../graphData.txt"); 
+const GRAPH_FILE_PATH = path.join(__dirname, "../graphData.txt");
 
 
 app.get('/graph', (req, res) => {
     console.log(`Spawning child process in directory: ${WORKING_DIRECTORY}`);
 
-   
+
     const process = spawn("uv", ["run", "ezmsg", "--address", "127.0.0.1:25978", "mermaid"], { cwd: WORKING_DIRECTORY });
 
     let output = "";
@@ -74,6 +74,19 @@ app.get('/signals', (req, res) => {
 // dummy pipelines
 app.get('/pipelines', (req, res) => {
     const filePath = path.resolve(__dirname, '../dummyFiles/pipelines.json');
+    console.log(filePath);
+    fs.readFile(filePath, 'utf8', (err, data) => {
+        if (err) {
+            res.status(500).json({ error: "Error" });
+            return;
+        }
+        res.json(JSON.parse(data));
+    });
+});
+
+// dummy performances
+app.get('/performances', (req, res) => {
+    const filePath = path.resolve(__dirname, '../dummyFiles/performances.json');
     console.log(filePath);
     fs.readFile(filePath, 'utf8', (err, data) => {
         if (err) {

@@ -1,7 +1,20 @@
-import React from "react";
-import { ChevronRight, GripVertical } from "lucide-react"; 
+import React, { useEffect, useState } from "react";
+import { ChevronRight, GripVertical } from "lucide-react";
 
 export default function MetricsSidebar() {
+
+  const [performances, setPerformances] = useState([]);
+
+  useEffect(() => {
+    fetch('http://localhost:1205/performances')
+      .then(response => response.json())
+      .then(data => {
+        console.log('Performance Data:', data);
+        setPerformances(data);
+      })
+      .catch(error => console.error('Error fetching performances data:', error));
+  }, []);
+
   return (
     <div className="w-64 bg-white p-4 shadow-lg rounded-lg border">
       {/* Signal Quality Graph */}
@@ -13,26 +26,13 @@ export default function MetricsSidebar() {
       {/* Processing Status */}
       <h3 className="text-lg font-semibold mt-6">Processing Status</h3>
       <ul className="mt-2 space-y-3">
-        {["Status 1", "Status 2", "Status 3", "Status 4"].map((status, index) => (
-          <li key={index} className="flex items-center justify-between px-3 py-2 bg-gray-100 rounded-md">
-            <GripVertical className="text-gray-500 w-4 h-4" /> {/*  Handle */}
-            <span className="flex-grow ml-2 bg-gray-200 h-4 w-24 rounded-md"></span> {/* Placeholder Text */}
-            <ChevronRight className="text-gray-500 w-4 h-4" /> {/*  Arrow */}
+        {performances.map((performance, index) => (
+          <li key={index} className="flex justify-between items-center py-1">
+            {performance.title}:<span className="text-gray-500">{performance.value}</span>
           </li>
         ))}
       </ul>
 
-      {/* Task Performance */}
-      <h3 className="text-lg font-semibold mt-6">Task Performance Metrics</h3>
-      <ul className="mt-2 space-y-3">
-        {["Metric 1", "Metric 2", "Metric 3", "Metric 4"].map((metric, index) => (
-          <li key={index} className="flex items-center justify-between px-3 py-2 bg-gray-100 rounded-md">
-            <GripVertical className="text-gray-500 w-4 h-4" /> {/* Handle */}
-            <span className="flex-grow ml-2 bg-gray-200 h-4 w-24 rounded-md"></span> {/* Placeholder Text */}
-            <ChevronRight className="text-gray-500 w-4 h-4" /> {/* Arrow */}
-          </li>
-        ))}
-      </ul>
     </div>
   );
 }

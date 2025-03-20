@@ -63,7 +63,7 @@ export function fetchGraphData(setGraphDefinition) {
     .catch((error) => console.error("Error fetching data:", error));
 }
 
-export default function MermaidDiagram({graphDefinition}) {
+export default function MermaidDiagram({ graphDefinition }) {
   const mermaidRef = useRef(null);
   // const [graphDefinition, setGraphDefinition] = useState("");
 
@@ -118,7 +118,7 @@ export default function MermaidDiagram({graphDefinition}) {
   }, [graphDefinition]);
 
   return (
-    <div className="mermaid-container h-full" style={{ }}>
+    <div className="mermaid-container h-full" style={{}}>
       <div ref={mermaidRef} id="mermaid-diagram-container" className="h-full"></div>
     </div>
   );

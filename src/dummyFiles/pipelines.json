@@ -1,5 +1,14 @@
 [
-    { "title": "Pipeline A", "description": "This is the pipeline A" },
-    { "title": "Pipeline B", "description": "This is the pipeline B" },
-    { "title": "Pipeline C", "description": "This is the pipeline C" }
-  ]
+  {
+    "title": "Spike Detection"
+  },
+  {
+    "title": "LFP Analysis"
+  },
+  {
+    "title": "Moto Imagery Analysis"
+  },
+  {
+    "title": "Cognitive state monitoring"
+  }
+]
