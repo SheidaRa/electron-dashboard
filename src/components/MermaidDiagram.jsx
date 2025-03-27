@@ -1,5 +1,3 @@
-
-
 import React, { useEffect, useRef } from "react";
 import mermaid from "mermaid";
 import svgPanZoom from "svg-pan-zoom";
@@ -9,7 +7,10 @@ export function fetchGraphData(setGraphDefinition) {
     .then((response) => response.text())
     .then((data) => {
       console.log("Fetched Mermaid Graph Data:", data);
-      setGraphDefinition(data);
+
+      const styledData = `${data.trim()}\nstyle car fill:#ffcccc,stroke:#ff0000,stroke-width:2px`; // Editing the car box color
+
+      setGraphDefinition(styledData);
     })
     .catch((error) => console.error("Error fetching data:", error));
 }
@@ -31,12 +32,13 @@ export default function MermaidDiagram({ graphDefinition }) {
     });
 
     if (mermaidRef.current && !graphDefinition) {
-      mermaidRef.current.innerHTML = '';
+      mermaidRef.current.innerHTML = "";
       return;
     }
 
     if (mermaidRef.current && graphDefinition) {
-      mermaid.render("mermaid-diagram", graphDefinition)
+      mermaid
+        .render("mermaid-diagram", graphDefinition)
         .then(({ svg }) => {
           mermaidRef.current.innerHTML = svg;
 
@@ -50,9 +52,9 @@ export default function MermaidDiagram({ graphDefinition }) {
               zoomEnabled: true,
               controlIconsEnabled: true, // Adds zoom buttons
               fit: true, // Fits the diagram in the container
-              center: true, 
-              minZoom: 0.5, 
-              maxZoom: 3, 
+              center: true,
+              minZoom: 0.5,
+              maxZoom: 3,
             });
 
             // Fit the diagram within the container on load
@@ -70,7 +72,11 @@ export default function MermaidDiagram({ graphDefinition }) {
 
   return (
     <div className="mermaid-container h-full" style={{}}>
-      <div ref={mermaidRef} id="mermaid-diagram-container" className="h-full"></div>
+      <div
+        ref={mermaidRef}
+        id="mermaid-diagram-container"
+        className="h-full"
+      ></div>
     </div>
   );
 }
