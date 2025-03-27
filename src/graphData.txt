@@ -1,2 +1,61 @@
+flowchart LR
+  subgraph ecog [ECOG]
+    c7e79db7-a491-4239-9bfa-d129227707b0[OUTPUT_SIGNAL]
+    subgraph clock [CLOCK]
+      fb0004d7-66b3-480f-8e83-cb42828d2e4d[OUTPUT_SIGNAL]
+    end
+    subgraph osc [OSC]
+      b8756261-d3af-4b04-ab7b-2fdf73841aba[INPUT_SIGNAL]
+      0388ee47-54fa-4b70-98d8-c9956dd70751[OUTPUT_SIGNAL]
+    end
+    subgraph noise [NOISE]
+      b20542ab-2bd2-4ccc-a861-abff97f905d4[INPUT_SIGNAL]
+      35dbb1a4-01e8-477b-be51-9da4c0bd702b[OUTPUT_SIGNAL]
+    end
+    subgraph add [ADD]
+      203db73d-3495-458c-8a48-4bdd6fdaca17[INPUT_SIGNAL_A]
+      8cb2650a-8ff2-4244-8404-20ec52f28ce3[INPUT_SIGNAL_B]
+      fd9c2714-4e4d-4688-a736-c543a7bb3431[OUTPUT_SIGNAL]
+    end
+  end
+  subgraph select [SELECT]
+    451e71df-60df-4959-b761-36d565853553[INPUT_SIGNAL]
+    e85b94d8-a413-4cf4-bf34-86c6eb1a8c01[OUTPUT_SIGNAL]
+  end
+  subgraph lp [LP]
+    5dc77dd4-3fdc-47db-a856-62e6cf28c89f[OUTPUT_SIGNAL]
+    facb7b19-94c1-4140-8a18-c798b9f6956c[INPUT_SIGNAL]
+  end
+  subgraph ds [DS]
+    ba7f7273-5cdb-43c4-a4ce-8ae6beaf8690[INPUT_SIGNAL]
+    0fbb2aab-d341-4f36-b87f-a573fef18ef7[OUTPUT_SIGNAL]
+  end
+  subgraph freq [FREQ]
+    d0b68d70-4209-4ffb-b64c-9e116ddb20e4[OUTPUT_SIGNAL]
+    53f2f44e-a997-4097-a3f5-8bdda713446c[INPUT_SIGNAL]
+  end
+  subgraph zscore [ZSCORE]
+    1beaf09d-0c63-4ea7-927b-74ee7eacb672[INPUT_SIGNAL]
+    9c211c0d-11ae-40a1-8d5e-ccfbf2127091[OUTPUT_SIGNAL]
+  end
+  subgraph car [CAR]
+    18097cde-8f1b-4c66-ae29-d8a165852127[OUTPUT_SIGNAL]
+    a67e9703-0328-4b8c-b8fa-1f257b3970ee[INPUT_SIGNAL]
+  end
+  subgraph term [TERM]
+    5b0f6a7b-9e5a-483d-bb70-0a75c93067d3[INPUT_MESSAGE]
+  end
+  c7e79db7-a491-4239-9bfa-d129227707b0 --> 451e71df-60df-4959-b761-36d565853553
+  5dc77dd4-3fdc-47db-a856-62e6cf28c89f --> ba7f7273-5cdb-43c4-a4ce-8ae6beaf8690
+  e85b94d8-a413-4cf4-bf34-86c6eb1a8c01 --> facb7b19-94c1-4140-8a18-c798b9f6956c
+  d0b68d70-4209-4ffb-b64c-9e116ddb20e4 --> 1beaf09d-0c63-4ea7-927b-74ee7eacb672
+  18097cde-8f1b-4c66-ae29-d8a165852127 --> 53f2f44e-a997-4097-a3f5-8bdda713446c
+  0fbb2aab-d341-4f36-b87f-a573fef18ef7 --> a67e9703-0328-4b8c-b8fa-1f257b3970ee
+  9c211c0d-11ae-40a1-8d5e-ccfbf2127091 --> 5b0f6a7b-9e5a-483d-bb70-0a75c93067d3
+  fb0004d7-66b3-480f-8e83-cb42828d2e4d --> b20542ab-2bd2-4ccc-a861-abff97f905d4
+  fb0004d7-66b3-480f-8e83-cb42828d2e4d --> b8756261-d3af-4b04-ab7b-2fdf73841aba
+  0388ee47-54fa-4b70-98d8-c9956dd70751 --> 203db73d-3495-458c-8a48-4bdd6fdaca17
+  35dbb1a4-01e8-477b-be51-9da4c0bd702b --> 8cb2650a-8ff2-4244-8404-20ec52f28ce3
+  fd9c2714-4e4d-4688-a736-c543a7bb3431 --> c7e79db7-a491-4239-9bfa-d129227707b0
 
 %% If the graph does not render immediately, try toggling the 'Pan & Zoom' button.
