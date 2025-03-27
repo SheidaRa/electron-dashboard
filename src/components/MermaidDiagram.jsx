@@ -4,15 +4,12 @@ import svgPanZoom from "svg-pan-zoom";
 
 export function fetchGraphData(setGraphDefinition) {
   fetch("http://localhost:1205/graph")
-    .then(() => {
-      return fetch("http://localhost:1205/styled-mermaid");
-    })
     .then((response) => response.text())
     .then((data) => {
-      console.log("Fetched styled graph:", data);
+      console.log("Fetched Mermaid Graph Data:", data);
       setGraphDefinition(data);
     })
-    .catch((error) => console.error("Error fetching graph data:", error));
+    .catch((error) => console.error("Error fetching data:", error));
 }
 
 export default function MermaidDiagram({ graphDefinition }) {
