@@ -71,43 +71,23 @@ app.get("/graph", (req, res) => {
       return res.status(500).send(`Command failed with exit code ${code}`);
     }
 
-    try {
-      const baseMermaid = output.trim().split("\n");
+    // Save to file
+    fs.writeFile(GRAPH_FILE_PATH, output, (err) => {
+      if (err) {
+        console.error("Error saving graph data:", err);
+        return res.status(500).send("Error saving graph data.");
+      }
+      console.log("Graph data saved to graphData.txt");
 
-      const logText = fs.readFileSync(logPath, "utf8").trim();
-      const averages = parseLogFile(logText);
-      const elapsedValues = Object.values(averages).filter((v) => !isNaN(v));
-      const maxElapsed =
-        elapsedValues.length > 0 ? Math.max(...elapsedValues) : 1.0;
-
-      const styleLines = Object.entries(averages)
-        .filter(([_, avg]) => !isNaN(avg))
-        .reduce(
-          (acc, [topic, avg]) => {
-            const nodeId = topic.split("/").pop().toLowerCase(); // Use only last part of topic
-            if (acc.seen.has(nodeId)) return acc;
-            const color = getColor(avg, maxElapsed);
-            acc.lines.push(`  style ${nodeId} fill:${color}`);
-            acc.seen.add(nodeId);
-            return acc;
-          },
-          { lines: [], seen: new Set() }
-        ).lines;
-
-      const finalMermaid = [...baseMermaid, ...styleLines].join("\n");
-
-      fs.writeFile(GRAPH_FILE_PATH, finalMermaid, (err) => {
+      // Read and return it
+      fs.readFile(GRAPH_FILE_PATH, "utf8", (err, data) => {
         if (err) {
-          console.error("Error saving styled graph:", err);
-          return res.status(500).send("Error saving styled graph.");
+          console.error("Error reading graphData.txt:", err);
+          return res.status(500).send("Error reading graph data.");
         }
-        console.log("Styled graph written to graphData.txt");
-        res.type("text/plain").send(finalMermaid);
+        res.send(data);
       });
-    } catch (err) {
-      console.error("Error while styling the graph:", err);
-      res.status(500).send("Failed to generate styled Mermaid graph.");
-    }
+    });
   });
 });
 
@@ -148,6 +128,34 @@ app.get("/performances", (req, res) => {
     }
     res.json(JSON.parse(data));
   });
+});
+
+app.get("/styled-mermaid", (req, res) => {
+  try {
+    const graphText = fs.readFileSync(GRAPH_FILE_PATH, "utf8").trim();
+    const logText = fs.readFileSync(logPath, "utf8").trim();
+    const baseMermaid = graphText.split("\n");
+
+    const averages = parseLogFile(logText);
+
+    const elapsedValues = Object.values(averages).filter((v) => !isNaN(v));
+    const maxElapsed =
+      elapsedValues.length > 0 ? Math.max(...elapsedValues) : 1.0;
+
+    const styleLines = Object.entries(averages)
+      .filter(([_, avg]) => !isNaN(avg))
+      .map(([topic, avg]) => {
+        const nodeId = topic.split("/").pop().toLowerCase(); // ✅ Use only last part of topic (e.g., "CAR")
+        const color = getColor(avg, maxElapsed);
+        return `  style ${nodeId} fill:${color}`;
+      });
+
+    const finalMermaid = [...baseMermaid, ...styleLines].join("\n");
+    res.type("text/plain").send(finalMermaid);
+  } catch (err) {
+    console.error("Error generating styled Mermaid:", err);
+    res.status(500).send("Failed to generate Mermaid diagram");
+  }
 });
 
 // Start the server
