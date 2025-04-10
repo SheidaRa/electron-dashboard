@@ -8,7 +8,10 @@ const app = express();
 const PORT = 1205;
 app.use(cors());
 // === CONFIG PATHS ===
-const logPath = path.resolve(__dirname, "../../../../../.ezmsg/profile/ezprofiler");
+const logPath = path.resolve(
+  __dirname,
+  "../../../../../.ezmsg/profile/ezprofiler"
+);
 
 const WORKING_DIRECTORY = path.resolve(__dirname, "../../../../../brnbci");
 const GRAPH_FILE_PATH = path.join(__dirname, "../graphData.txt");

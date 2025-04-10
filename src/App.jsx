@@ -4,12 +4,12 @@ import Sidebar from "./components/Sidebar.jsx";
 import PipelineConfig from "./components/PipelineConfig.jsx";
 import MetricsSidebar from "./components/MetricsSidebar.jsx";
 import EventLog from "./components/EventLog.jsx";
-import { fetchGraphData } from './components/MermaidDiagram.jsx';
+import { fetchGraphData } from "./components/MermaidDiagram.jsx";
+import { fetchStyledGraph } from "./components/MermaidDiagram.jsx";
 import { ChevronDown } from "lucide-react";
 
 export default function App() {
-
-  const [graphDefinition, setGraphDefinition] = useState("")
+  const [graphDefinition, setGraphDefinition] = useState("");
 
   const [fileName, setFileName] = useState("No file selected");
 
@@ -18,18 +18,30 @@ export default function App() {
     setFileName(file ? file.name : "No file selected");
   };
 
-  const [isGraphRunning, setIsGraphRunning] = useState(false)
+  const [isGraphRunning, setIsGraphRunning] = useState(false);
+  const [isGraphStyled, setIsGraphStyled] = useState(false);
 
   const handleFetchGraph = () => {
     setIsGraphRunning(!isGraphRunning);
 
-    if (!isGraphRunning) {
+    if (!isGraphRunning && !isGraphStyled) {
       fetchGraphData(setGraphDefinition);
-    }
-    else {
+    } else if (!isGraphRunning && isGraphStyled) {
+      fetchStyledGraph(setGraphDefinition);
+    } else {
       setGraphDefinition("");
     }
-  }
+  };
+
+  const handleGraphStyling = () => {
+    setIsGraphStyled(!isGraphStyled);
+
+    if (!isGraphStyled && isGraphRunning) {
+      fetchStyledGraph(setGraphDefinition);
+    } else if (isGraphStyled && isGraphRunning) {
+      fetchGraphData(setGraphDefinition);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gray-100 text-gray-900 flex flex-col">
@@ -40,13 +52,14 @@ export default function App() {
       {/* Left Sidebar */}
 
       <div className="flex">
-
         <Sidebar />
 
         <div className="w-full p-4 bg-white">
           <p>Untitled Project</p>
           <div className="flex items-center space-x-4 rounded-lg w-full ">
-            <div className="flex-1 text-gray-700 truncate border-gray-700 border p-2 rounded-lg">{fileName}</div>
+            <div className="flex-1 text-gray-700 truncate border-gray-700 border p-2 rounded-lg">
+              {fileName}
+            </div>
             <label className="bg-blue-500 text-white px-4 py-2 rounded-lg cursor-pointer hover:bg-blue-600 transition">
               Upload
               <input
@@ -59,7 +72,10 @@ export default function App() {
           <div className="flex w-full gap-4 mt-4">
             <div className="w-full flex flex-col gap-4">
               {/* Pipeline Configuration Section */}
-              <PipelineConfig graphDefinition={graphDefinition} setGraphDefinition={setGraphDefinition} />
+              <PipelineConfig
+                graphDefinition={graphDefinition}
+                setGraphDefinition={setGraphDefinition}
+              />
 
               <p>Task</p>
               <div className="border border-gray-700 rounded-lg p-2 flex justify-end">
@@ -75,6 +91,15 @@ export default function App() {
                   onClick={handleFetchGraph}
                 >
                   {isGraphRunning ? "STOP" : "START"}
+                </button>
+              </div>
+              <div className="flex gap-4 items-center">
+                <p>Graph styling</p>
+                <button
+                  className="bg-blue-500 text-white px-4 py-2 rounded-lg cursor-pointer hover:bg-blue-600 transition"
+                  onClick={handleGraphStyling}
+                >
+                  {isGraphStyled ? "OFF" : "ON"}
                 </button>
               </div>
             </div>
