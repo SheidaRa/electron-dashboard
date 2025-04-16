@@ -130,7 +130,7 @@ export default function App() {
                 </button>
               </div>
               <div className="flex gap-4 items-center">
-                <p>Graph styling</p>
+                <p>Profiling</p>
                 <button
                   className="bg-blue-500 text-white px-4 py-2 rounded-lg cursor-pointer hover:bg-blue-600 transition"
                   onClick={handleGraphStyling}
