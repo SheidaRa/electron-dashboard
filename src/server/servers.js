@@ -1,3 +1,4 @@
+require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
 const fs = require("fs");
@@ -12,8 +13,11 @@ const logPath = path.resolve(
   __dirname,
   "../../../../../.ezmsg/profile/ezprofiler"
 );
+// const logPath = path.resolve(__dirname, "../dummyFiles/ezprofiler.log");
 
-const WORKING_DIRECTORY = path.resolve(__dirname, "../../../../../brnbci");
+const WORKING_DIRECTORY =
+  process.env.BRNBCI_DIR ||
+  "Set your brnbci path inside the .env file at the root of this repo";
 const GRAPH_FILE_PATH = path.join(__dirname, "../graphData.txt");
 
 // === HELPER FUNCTIONS ===
@@ -133,31 +137,65 @@ app.get("/performances", (req, res) => {
 });
 
 app.get("/styled-mermaid", (req, res) => {
-  try {
-    const graphText = fs.readFileSync(GRAPH_FILE_PATH, "utf8").trim();
-    const logText = fs.readFileSync(logPath, "utf8").trim();
-    const baseMermaid = graphText.split("\n");
+  console.log(`Running: uv run EZMSG_LOGLEVEL=DEBUG python`);
 
-    const averages = parseLogFile(logText);
+  const uvProcess = spawn(
+    "uv",
+    ["run", "ezmsg", "--address", "127.0.0.1:25978", "mermaid"],
+    {
+      cwd: WORKING_DIRECTORY,
+      env: {
+        ...process.env,
+        EZMSG_LOGLEVEL: "DEBUG",
+      },
+    }
+  );
 
-    const elapsedValues = Object.values(averages).filter((v) => !isNaN(v));
-    const maxElapsed =
-      elapsedValues.length > 0 ? Math.max(...elapsedValues) : 1.0;
+  let scriptOutput = "";
+  let scriptError = "";
 
-    const styleLines = Object.entries(averages)
-      .filter(([_, avg]) => !isNaN(avg))
-      .map(([topic, avg]) => {
-        const nodeId = topic.split("/").pop().toLowerCase(); // ✅ Use only last part of topic (e.g., "CAR")
-        const color = getColor(avg, maxElapsed);
-        return `  style ${nodeId} fill:${color}`;
-      });
+  uvProcess.stdout.on("data", (data) => {
+    scriptOutput += data.toString();
+  });
 
-    const finalMermaid = [...baseMermaid, ...styleLines].join("\n");
-    res.type("text/plain").send(finalMermaid);
-  } catch (err) {
-    console.error("Error generating styled Mermaid:", err);
-    res.status(500).send("Failed to generate Mermaid diagram");
-  }
+  uvProcess.stderr.on("data", (data) => {
+    scriptError += data.toString();
+  });
+
+  uvProcess.on("close", (code) => {
+    if (code !== 0) {
+      console.error("Script error:", scriptError);
+      return res
+        .status(500)
+        .send(`Python script failed with exit code ${code}`);
+    }
+
+    try {
+      const graphText = fs.readFileSync(GRAPH_FILE_PATH, "utf8").trim();
+      const logText = fs.readFileSync(logPath, "utf8").trim();
+      const baseMermaid = graphText.split("\n");
+
+      const averages = parseLogFile(logText);
+
+      const elapsedValues = Object.values(averages).filter((v) => !isNaN(v));
+      const maxElapsed =
+        elapsedValues.length > 0 ? Math.max(...elapsedValues) : 1.0;
+
+      const styleLines = Object.entries(averages)
+        .filter(([_, avg]) => !isNaN(avg))
+        .map(([topic, avg]) => {
+          const nodeId = topic.split("/").pop().toLowerCase();
+          const color = getColor(avg, maxElapsed);
+          return `  style ${nodeId} fill:${color}`;
+        });
+
+      const finalMermaid = [...baseMermaid, ...styleLines].join("\n");
+      res.type("text/plain").send(finalMermaid);
+    } catch (err) {
+      console.error("Error generating styled Mermaid:", err);
+      res.status(500).send("Failed to generate Mermaid diagram");
+    }
+  });
 });
 
 // Start the server
