@@ -1,10 +1,18 @@
+require("dotenv").config();
 const { app, BrowserWindow, session } = require("electron");
-const path = require("node:path");
+const path = require("path");
+const { spawn } = require("child_process");
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
 if (require("electron-squirrel-startup")) {
   app.quit();
 }
+
+let ezmsgDaemon = null;
+
+const WORKING_DIRECTORY =
+  process.env.BRNBCI_DIR ||
+  "Set your brnbci path inside the .env file at the root of this repo";
 
 const createWindow = () => {
   // Create the browser window.
@@ -33,11 +41,27 @@ app.whenReady().then(() => {
       responseHeaders: {
         ...details.responseHeaders,
         "Content-Security-Policy": [
-          "connect-src 'self' http://localhost:1205; default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline';",
+          "connect-src 'self' http://localhost:1205 ws://localhost:1205 ws://127.0.0.1:1205 ; default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline';",
         ],
       },
     });
   });
+
+  console.log("Starting ezmsg...");
+
+  ezmsgDaemon = spawn(
+    "uv",
+    ["run", "ezmsg", "--address", "127.0.0.1:25978", "start"],
+    {
+      cwd: WORKING_DIRECTORY,
+      detached: true,
+      stdio: "pipe",
+      shell: true,
+      windowsHide: true,
+    }
+  );
+
+  ezmsgDaemon.unref();
 
   createWindow();
 
@@ -48,6 +72,13 @@ app.whenReady().then(() => {
       createWindow();
     }
   });
+});
+
+app.on("before-quit", () => {
+  if (ezmsgDaemon) {
+    console.log("Stopping ezmsg bus...");
+    ezmsgDaemon.kill("SIGTERM");
+  }
 });
 
 // Quit when all windows are closed, except on macOS. There, it's common

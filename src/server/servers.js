@@ -4,21 +4,58 @@ const cors = require("cors");
 const fs = require("fs");
 const path = require("path");
 const { spawn } = require("child_process");
+const os = require("os");
+const WebSocket = require("ws");
+const http = require("http");
 
 const app = express();
 const PORT = 1205;
 app.use(cors());
+
+const server = http.createServer(app);
+const wss = new WebSocket.Server({ server });
+
+const clients = new Set();
+
+wss.on("connection", (ws) => {
+  console.log("UI connected to log stream");
+  clients.add(ws);
+
+  ws.on("close", () => {
+    clients.delete(ws);
+  });
+});
+
+function broadcastLog(logLine) {
+  for (const client of clients) {
+    if (client.readyState === WebSocket.OPEN) {
+      client.send(logLine);
+    }
+  }
+}
+
 // === CONFIG PATHS ===
-const logPath = path.resolve(
-  __dirname,
-  "../../../../../.ezmsg/profile/ezprofiler"
-);
-// const logPath = path.resolve(__dirname, "../dummyFiles/ezprofiler.log");
+
+const LOG_PATH =
+  process.env.EZMSG_PROFILE ||
+  path.join(os.homedir(), ".ezmsg", "profile", "l", "ezprofiler.log");
 
 const WORKING_DIRECTORY =
   process.env.BRNBCI_DIR ||
   "Set your brnbci path inside the .env file at the root of this repo";
-const GRAPH_FILE_PATH = path.join(__dirname, "../graphData.txt");
+
+// Send console logs to UI
+
+function interceptConsole(method = "log") {
+  const original = console[method];
+  console[method] = (...args) => {
+    const message = args.map(String).join(" ");
+    original.apply(console, args); // affiche normalement dans le terminal
+    broadcastLog(`[${method.toUpperCase()}] ${message}`); // envoie au front
+  };
+}
+
+["log", "warn", "error"].forEach(interceptConsole);
 
 // === HELPER FUNCTIONS ===
 function parseLogFile(logText) {
@@ -52,49 +89,119 @@ function getColor(elapsed, maxElapsed) {
     .padStart(2, "0")}80`;
 }
 
-app.get("/graph", (req, res) => {
-  console.log(`Spawning child process in directory: ${WORKING_DIRECTORY}`);
+let currentPipelineProcess = null;
 
-  const process = spawn(
-    "uv",
-    ["run", "ezmsg", "--address", "127.0.0.1:25978", "mermaid"],
-    { cwd: WORKING_DIRECTORY }
+app.get("/graph", (req, res) => {
+  const shouldProfile = req.query.profiling === "true";
+  const pythonScriptPath = path.join(
+    WORKING_DIRECTORY,
+    "scripts_nbs",
+    "temp",
+    "ecog_preproc.py"
   );
 
-  let output = "";
-
-  // Capture output
-  process.stdout.on("data", (data) => {
-    output += data.toString();
-  });
-
-  process.stderr.on("data", (data) => {
-    console.error(`Error: ${data.toString()}`);
-  });
-
-  process.on("close", (code) => {
-    if (code !== 0) {
-      return res.status(500).send(`Command failed with exit code ${code}`);
+  // Kill previous pipeline if it exists
+  if (currentPipelineProcess) {
+    console.log("Killing existing pipeline process...");
+    try {
+      currentPipelineProcess.kill("SIGTERM");
+    } catch (err) {
+      console.warn("Failed to kill previous process:", err.message);
     }
+    currentPipelineProcess = null;
+  }
 
-    // Save to file
-    fs.writeFile(GRAPH_FILE_PATH, output, (err) => {
-      if (err) {
-        console.error("Error saving graph data:", err);
-        return res.status(500).send("Error saving graph data.");
-      }
-      console.log("Graph data saved to graphData.txt");
+  const env = {
+    ...process.env,
+    ...(shouldProfile && {
+      EZMSG_LOGLEVEL: "DEBUG",
+      EZMSG_PROFILE: LOG_PATH,
+    }),
+  };
 
-      // Read and return it
-      fs.readFile(GRAPH_FILE_PATH, "utf8", (err, data) => {
-        if (err) {
-          console.error("Error reading graphData.txt:", err);
-          return res.status(500).send("Error reading graph data.");
-        }
-        res.send(data);
-      });
-    });
+  console.log(
+    "Launching pipeline" + (shouldProfile ? " with profiling..." : "...")
+  );
+
+  const pipelineProcess = spawn("uv", ["run", "python", pythonScriptPath], {
+    cwd: WORKING_DIRECTORY,
+    env,
+    stdio: "ignore",
+    windowsHide: true,
   });
+
+  pipelineProcess.unref();
+  currentPipelineProcess = pipelineProcess;
+
+  const delay = shouldProfile ? 1000 : 0;
+
+  setTimeout(() => {
+    const ezmsgProcess = spawn(
+      "uv",
+      ["run", "ezmsg", "--address", "127.0.0.1:25978", "mermaid"],
+      {
+        cwd: WORKING_DIRECTORY,
+        windowsHide: true,
+      }
+    );
+
+    let output = "";
+
+    ezmsgProcess.stdout.on("data", (data) => {
+      output += data.toString();
+    });
+
+    ezmsgProcess.stderr.on("data", (data) => {
+      const log = `[ezmsg error] ${data.toString()}`;
+      console.error(log);
+      broadcastLog(log);
+    });
+
+    ezmsgProcess.stdout.on("data", (data) => {
+      const log = `[ezmsg] ${data.toString()}`;
+      broadcastLog(log);
+    });
+
+    ezmsgProcess.on("close", (code) => {
+      if (code !== 0) {
+        return res
+          .status(500)
+          .send(`ezmsg command failed with exit code ${code}`);
+      }
+
+      if (!shouldProfile) {
+        return res.type("text/plain").send(output);
+      }
+
+      try {
+        if (!fs.existsSync(LOG_PATH)) {
+          return res.status(404).send("Profiler log not found.");
+        }
+
+        const logText = fs.readFileSync(LOG_PATH, "utf8").trim();
+        const baseMermaid = output.trim().split("\n");
+
+        const averages = parseLogFile(logText);
+        const elapsedValues = Object.values(averages).filter((v) => !isNaN(v));
+        const maxElapsed =
+          elapsedValues.length > 0 ? Math.max(...elapsedValues) : 1.0;
+
+        const styleLines = Object.entries(averages)
+          .filter(([_, avg]) => !isNaN(avg))
+          .map(([topic, avg]) => {
+            const nodeId = topic.split("/").pop().toLowerCase();
+            const color = getColor(avg, maxElapsed);
+            return `  style ${nodeId} fill:${color}`;
+          });
+
+        const finalMermaid = [...baseMermaid, ...styleLines].join("\n");
+        res.type("text/plain").send(finalMermaid);
+      } catch (err) {
+        console.error("Styling failed:", err);
+        return res.status(500).send("Failed to style graph.");
+      }
+    });
+  }, delay);
 });
 
 // dummy signals route
@@ -136,69 +243,7 @@ app.get("/performances", (req, res) => {
   });
 });
 
-app.get("/styled-mermaid", (req, res) => {
-  console.log(`Running: uv run EZMSG_LOGLEVEL=DEBUG python`);
-
-  const uvProcess = spawn(
-    "uv",
-    ["run", "ezmsg", "--address", "127.0.0.1:25978", "mermaid"],
-    {
-      cwd: WORKING_DIRECTORY,
-      env: {
-        ...process.env,
-        EZMSG_LOGLEVEL: "DEBUG",
-      },
-    }
-  );
-
-  let scriptOutput = "";
-  let scriptError = "";
-
-  uvProcess.stdout.on("data", (data) => {
-    scriptOutput += data.toString();
-  });
-
-  uvProcess.stderr.on("data", (data) => {
-    scriptError += data.toString();
-  });
-
-  uvProcess.on("close", (code) => {
-    if (code !== 0) {
-      console.error("Script error:", scriptError);
-      return res
-        .status(500)
-        .send(`Python script failed with exit code ${code}`);
-    }
-
-    try {
-      const graphText = fs.readFileSync(GRAPH_FILE_PATH, "utf8").trim();
-      const logText = fs.readFileSync(logPath, "utf8").trim();
-      const baseMermaid = graphText.split("\n");
-
-      const averages = parseLogFile(logText);
-
-      const elapsedValues = Object.values(averages).filter((v) => !isNaN(v));
-      const maxElapsed =
-        elapsedValues.length > 0 ? Math.max(...elapsedValues) : 1.0;
-
-      const styleLines = Object.entries(averages)
-        .filter(([_, avg]) => !isNaN(avg))
-        .map(([topic, avg]) => {
-          const nodeId = topic.split("/").pop().toLowerCase();
-          const color = getColor(avg, maxElapsed);
-          return `  style ${nodeId} fill:${color}`;
-        });
-
-      const finalMermaid = [...baseMermaid, ...styleLines].join("\n");
-      res.type("text/plain").send(finalMermaid);
-    } catch (err) {
-      console.error("Error generating styled Mermaid:", err);
-      res.status(500).send("Failed to generate Mermaid diagram");
-    }
-  });
-});
-
 // Start the server
-app.listen(PORT, () => {
-  console.log(`Server running at http://localhost:${PORT}`);
+server.listen(PORT, () => {
+  console.log(`Server + WebSocket running at http://localhost:${PORT}`);
 });

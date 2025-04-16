@@ -1,23 +1,25 @@
 import React, { useState } from "react";
-import { fetchGraphData } from './MermaidDiagram.jsx';
+import { fetchGraph } from "./MermaidDiagram.jsx";
 
-export default function TopBar({setGraphDefinition}) {
+export default function TopBar({ setGraphDefinition, isGraphStyled }) {
+  const [isGraphRunning, setIsGraphRunning] = useState(false);
 
-  const [isGraphRunning, setIsGraphRunning] = useState(false)
+  const handleFetchGraph = () => {
+    const willStart = !isGraphRunning;
+    setIsGraphRunning(willStart);
 
-   const handleFetchGraph = () => {
-    setIsGraphRunning(!isGraphRunning);
-
-    if(!isGraphRunning) {
-      fetchGraphData(setGraphDefinition);
+    if (willStart) {
+      fetchGraph({
+        setGraphDefinition,
+        profiling: isGraphStyled,
+      });
+    } else {
+      setGraphDefinition(""); // Clear graph when stopping
     }
-    else {
-      setGraphDefinition("");
-    }
-   }
+  };
 
   return (
-    <div className="flex items-center justify-between border border-gray-300 rounded-md w-full bg-white p-2  my-2">
+    <div className="flex items-center justify-between border border-gray-300 rounded-md w-full bg-white p-2 my-2">
       {/* Green Status Indicator */}
       <div className="w-4 h-4 bg-green-500 rounded-full ml-4"></div>
 
@@ -26,9 +28,9 @@ export default function TopBar({setGraphDefinition}) {
         Implant: Connected
       </span>
 
-      {/* Stop Button */}
-      <button 
-        className="border border-black text-black px-4 py-1 rounded-md mr-4" 
+      {/* Start/Stop Button */}
+      <button
+        className="border border-black text-black px-4 py-1 rounded-md mr-4"
         onClick={handleFetchGraph}
       >
         {isGraphRunning ? "STOP" : "START"}

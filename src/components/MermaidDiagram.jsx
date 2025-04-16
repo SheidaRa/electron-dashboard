@@ -2,18 +2,12 @@ import React, { useEffect, useRef } from "react";
 import mermaid from "mermaid";
 import svgPanZoom from "svg-pan-zoom";
 
-export function fetchGraphData(setGraphDefinition) {
-  fetch("http://localhost:1205/graph")
-    .then((response) => response.text())
-    .then((data) => {
-      console.log("Fetched graph:", data);
-      setGraphDefinition(data);
-    })
-    .catch((error) => console.error("Error fetching graph data:", error));
-}
+export function fetchGraph({ setGraphDefinition, profiling = false }) {
+  const url = profiling
+    ? "http://localhost:1205/graph?profiling=true"
+    : "http://localhost:1205/graph";
 
-export function fetchStyledGraph(setGraphDefinition) {
-  fetch("http://localhost:1205/styled-mermaid")
+  fetch(url)
     .then((response) => response.text())
     .then((data) => {
       console.log("Fetched graph:", data);

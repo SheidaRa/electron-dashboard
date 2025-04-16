@@ -4,14 +4,22 @@ import Sidebar from "./components/Sidebar.jsx";
 import PipelineConfig from "./components/PipelineConfig.jsx";
 import MetricsSidebar from "./components/MetricsSidebar.jsx";
 import EventLog from "./components/EventLog.jsx";
-import { fetchGraphData } from "./components/MermaidDiagram.jsx";
-import { fetchStyledGraph } from "./components/MermaidDiagram.jsx";
+import { fetchGraph } from "./components/MermaidDiagram.jsx";
 import { ChevronDown } from "lucide-react";
 
 export default function App() {
   const [graphDefinition, setGraphDefinition] = useState("");
 
   const [fileName, setFileName] = useState("No file selected");
+
+  const [logs, setLogs] = useState([]);
+
+  const appendLog = (text) => {
+    setLogs((prev) => [
+      ...prev,
+      `[${new Date().toLocaleTimeString()}] ${text}`,
+    ]);
+  };
 
   const handleFileChange = (event) => {
     const file = event.target.files[0];
@@ -21,25 +29,53 @@ export default function App() {
   const [isGraphRunning, setIsGraphRunning] = useState(false);
   const [isGraphStyled, setIsGraphStyled] = useState(false);
 
-  const handleFetchGraph = () => {
-    setIsGraphRunning(!isGraphRunning);
+  // Get logs from server
+  useEffect(() => {
+    appendLog("Trying to connect to the WebSocket");
+    const socket = new WebSocket(`ws://127.0.0.1:1205`);
+    socket.onmessage = (event) => {
+      const logLine = event.data;
+      appendLog(logLine);
+    };
 
-    if (!isGraphRunning && !isGraphStyled) {
-      fetchGraphData(setGraphDefinition);
-    } else if (!isGraphRunning && isGraphStyled) {
-      fetchStyledGraph(setGraphDefinition);
+    socket.onopen = () => {
+      appendLog("Connected to log stream");
+    };
+
+    socket.onerror = (err) => {
+      appendLog("WebSocket error:", err);
+    };
+
+    return () => {
+      socket.close();
+    };
+  }, []);
+
+  const handleFetchGraph = () => {
+    const willStart = !isGraphRunning;
+
+    setIsGraphRunning(willStart);
+    if (willStart) {
+      fetchGraph({
+        setGraphDefinition,
+        profiling: isGraphStyled,
+      });
     } else {
       setGraphDefinition("");
     }
   };
 
   const handleGraphStyling = () => {
-    setIsGraphStyled(!isGraphStyled);
+    const willStyle = !isGraphStyled;
 
-    if (!isGraphStyled && isGraphRunning) {
-      fetchStyledGraph(setGraphDefinition);
-    } else if (isGraphStyled && isGraphRunning) {
-      fetchGraphData(setGraphDefinition);
+    setIsGraphStyled(willStyle);
+
+    // If graph is already running, refetch it with the new styling state
+    if (isGraphRunning) {
+      fetchGraph({
+        setGraphDefinition,
+        profiling: willStyle,
+      });
     }
   };
 
@@ -109,7 +145,7 @@ export default function App() {
           </div>
 
           {/* Event Log Section */}
-          <EventLog />
+          <EventLog logs={logs} />
         </div>
       </div>
     </div>
