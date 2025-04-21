@@ -14,6 +14,14 @@ export default function App() {
 
   const [logs, setLogs] = useState([]);
 
+  const [homedir, setHomedir] = useState("");
+
+  useEffect(() => {
+    if (window.electronAPI?.getHomedir) {
+      window.electronAPI.getHomedir().then(setHomedir);
+    }
+  }, []);
+
   const appendLog = (text) => {
     setLogs((prev) => [
       ...prev,
@@ -120,7 +128,7 @@ export default function App() {
               <p>Storage Location</p>
               <div className="flex justify-between gap-4">
                 <span className="border border-gray-700 p-2 rounded-lg w-full">
-                  C:\Users\LabUser\Documents\NeuralData\Subject05\Session01\Task\
+                  {homedir || "Loading..."}
                 </span>
                 <button
                   className="bg-blue-500 text-white px-4 py-2 rounded-lg cursor-pointer hover:bg-blue-600 transition"

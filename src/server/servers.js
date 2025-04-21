@@ -3,7 +3,7 @@ const express = require("express");
 const cors = require("cors");
 const fs = require("fs");
 const path = require("path");
-const { spawn } = require("child_process");
+const { spawn, execSync } = require("child_process");
 const os = require("os");
 const WebSocket = require("ws");
 const http = require("http");
@@ -34,8 +34,6 @@ function broadcastLog(logLine) {
   }
 }
 
-// === CONFIG PATHS ===
-
 const LOG_PATH =
   process.env.EZMSG_PROFILE ||
   path.join(os.homedir(), ".ezmsg", "profile", "l", "ezprofiler.log");
@@ -44,20 +42,17 @@ const WORKING_DIRECTORY =
   process.env.BRNBCI_DIR ||
   "Set your brnbci path inside the .env file at the root of this repo";
 
-// Send console logs to UI
-
 function interceptConsole(method = "log") {
   const original = console[method];
   console[method] = (...args) => {
     const message = args.map(String).join(" ");
-    original.apply(console, args); // affiche normalement dans le terminal
-    broadcastLog(`[${method.toUpperCase()}] ${message}`); // envoie au front
+    original.apply(console, args);
+    broadcastLog(`[${method.toUpperCase()}] ${message}`);
   };
 }
 
 ["log", "warn", "error"].forEach(interceptConsole);
 
-// === HELPER FUNCTIONS ===
 function parseLogFile(logText) {
   const lines = logText.trim().split("\n");
   const data = {};
@@ -80,7 +75,7 @@ function parseLogFile(logText) {
 
 function getColor(elapsed, maxElapsed) {
   if (isNaN(elapsed) || isNaN(maxElapsed) || maxElapsed === 0)
-    return "#99999980"; // Fallback
+    return "#99999980";
   const ratio = Math.min(elapsed / maxElapsed, 1.0);
   const r = Math.floor(255 * ratio);
   const b = Math.floor(255 * (1 - ratio));
@@ -90,6 +85,20 @@ function getColor(elapsed, maxElapsed) {
 }
 
 let currentPipelineProcess = null;
+let currentMermaidProcess = null;
+
+function killProcessAndChildren(pid) {
+  try {
+    if (process.platform === "win32") {
+      execSync(`taskkill /PID ${pid} /T /F`);
+    } else {
+      process.kill(-pid, "SIGTERM");
+    }
+    console.log(`Killed process tree for PID: ${pid}`);
+  } catch (err) {
+    console.warn("Failed to kill process:", err.message);
+  }
+}
 
 app.get("/graph", (req, res) => {
   const shouldProfile = req.query.profiling === "true";
@@ -100,15 +109,16 @@ app.get("/graph", (req, res) => {
     "ecog_preproc.py"
   );
 
-  // Kill previous pipeline if it exists
   if (currentPipelineProcess) {
     console.log("Killing existing pipeline process...");
-    try {
-      currentPipelineProcess.kill("SIGTERM");
-    } catch (err) {
-      console.warn("Failed to kill previous process:", err.message);
-    }
+    killProcessAndChildren(currentPipelineProcess.pid);
     currentPipelineProcess = null;
+  }
+
+  if (currentMermaidProcess) {
+    console.log("Killing existing mermaid process...");
+    killProcessAndChildren(currentMermaidProcess.pid);
+    currentMermaidProcess = null;
   }
 
   const env = {
@@ -145,10 +155,13 @@ app.get("/graph", (req, res) => {
       }
     );
 
+    currentMermaidProcess = ezmsgProcess;
+
     let output = "";
 
     ezmsgProcess.stdout.on("data", (data) => {
       output += data.toString();
+      broadcastLog(`[ezmsg] ${data.toString()}`);
     });
 
     ezmsgProcess.stderr.on("data", (data) => {
@@ -157,12 +170,8 @@ app.get("/graph", (req, res) => {
       broadcastLog(log);
     });
 
-    ezmsgProcess.stdout.on("data", (data) => {
-      const log = `[ezmsg] ${data.toString()}`;
-      broadcastLog(log);
-    });
-
     ezmsgProcess.on("close", (code) => {
+      currentMermaidProcess = null;
       if (code !== 0) {
         return res
           .status(500)
@@ -204,46 +213,31 @@ app.get("/graph", (req, res) => {
   }, delay);
 });
 
-// dummy signals route
+// Dummy endpoints
 app.get("/signals", (req, res) => {
   const filePath = path.resolve(__dirname, "../dummyFiles/signals.json");
-  console.log(filePath);
   fs.readFile(filePath, "utf8", (err, data) => {
-    if (err) {
-      res.status(500).json({ error: "Error" });
-      return;
-    }
+    if (err) return res.status(500).json({ error: "Error" });
     res.json(JSON.parse(data));
   });
 });
 
-// dummy pipelines
 app.get("/pipelines", (req, res) => {
   const filePath = path.resolve(__dirname, "../dummyFiles/pipelines.json");
-  console.log(filePath);
   fs.readFile(filePath, "utf8", (err, data) => {
-    if (err) {
-      res.status(500).json({ error: "Error" });
-      return;
-    }
+    if (err) return res.status(500).json({ error: "Error" });
     res.json(JSON.parse(data));
   });
 });
 
-// dummy performances
 app.get("/performances", (req, res) => {
   const filePath = path.resolve(__dirname, "../dummyFiles/performances.json");
-  console.log(filePath);
   fs.readFile(filePath, "utf8", (err, data) => {
-    if (err) {
-      res.status(500).json({ error: "Error" });
-      return;
-    }
+    if (err) return res.status(500).json({ error: "Error" });
     res.json(JSON.parse(data));
   });
 });
 
-// Start the server
 server.listen(PORT, () => {
   console.log(`Server + WebSocket running at http://localhost:${PORT}`);
 });
