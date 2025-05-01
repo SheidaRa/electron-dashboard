@@ -91,10 +91,14 @@ export default function App() {
   };
 
   useEffect(() => {
+    handleFetchGraphServices();
+  }, []);
+
+  const handleFetchGraphServices = () => {
     fetch("http://localhost:1205/graph-services")
       .then((res) => res.json())
       .then((data) => setAvailableGraphs(data.ports));
-  }, []);
+  };
 
   return (
     <div className="min-h-screen bg-gray-100 text-gray-900 flex flex-col">
@@ -159,6 +163,7 @@ export default function App() {
                 availableGraphs={availableGraphs}
                 selectedGraph={selectedGraph}
                 onChange={setSelectedGraph}
+                handleFetchGraphServices={handleFetchGraphServices}
               />
             </div>
 

@@ -150,6 +150,7 @@ async function isEzmsgGraphServerRunning(port) {
 }
 
 app.get("/graph-services", async (req, res) => {
+  broadcastLog("Scanning ports 25978 to 25988 for active graph services...");
   const portsToCheck = Array.from({ length: 11 }, (_, i) => 25978 + i); // test port range 25978–25988
   const results = await Promise.all(
     portsToCheck.map(async (port) => {
@@ -160,6 +161,7 @@ app.get("/graph-services", async (req, res) => {
 
   const activePorts = results.filter((p) => p !== null);
   res.json({ ports: activePorts });
+  broadcastLog(`Active graph services found on ports ${activePorts}`);
 });
 
 app.get("/graph", (req, res) => {
