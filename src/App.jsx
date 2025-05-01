@@ -107,7 +107,7 @@ export default function App() {
       <div className="flex">
         <Sidebar />
 
-        <div className="w-full p-4 bg-white">
+        <div className="w-full p-4 bg-white ">
           <p>Untitled Project</p>
           <div className="flex items-center space-x-4 rounded-lg w-full ">
             <div className="flex-1 text-gray-700 truncate border-gray-700 border p-2 rounded-lg">

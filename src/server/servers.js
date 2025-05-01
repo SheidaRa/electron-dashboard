@@ -116,6 +116,7 @@ async function isEzmsgGraphServerRunning(port) {
           cwd: WORKING_DIRECTORY,
           shell: true,
           windowsHide: true,
+          stdio: ["ignore", "pipe", "pipe"],
         }
       );
 
@@ -126,11 +127,14 @@ async function isEzmsgGraphServerRunning(port) {
       });
 
       proc.on("close", () => {
-        // If we saw the "GraphServer not running" line, it's not active
-        if (output.includes("GraphServer not running")) {
+        // Graph service is not active if we receive an output error msg
+        if (
+          output.includes("GraphServer not running") ||
+          output.includes("IncompleteReadError")
+        ) {
           resolve(false);
         } else {
-          resolve(true); // no error = graph server likely running
+          resolve(true); // no error = graph server running
         }
       });
 
