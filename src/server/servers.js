@@ -7,6 +7,7 @@ const { spawn, execSync } = require("child_process");
 const os = require("os");
 const WebSocket = require("ws");
 const http = require("http");
+const net = require("net");
 
 const app = express();
 const PORT = 1205;
@@ -99,6 +100,63 @@ function killProcessAndChildren(pid) {
     console.warn("Failed to kill process:", err.message);
   }
 }
+
+async function isEzmsgGraphServerRunning(port) {
+  return new Promise((resolve) => {
+    const client = new net.Socket();
+    client.setTimeout(200);
+
+    //Checking if port is opened first
+    client.connect(port, "127.0.0.1", () => {
+      client.destroy(); // Port is open — now try ezmsg
+      const proc = spawn(
+        "uv",
+        ["run", "ezmsg", "--address", `127.0.0.1:${port}`, "graphviz"],
+        {
+          cwd: WORKING_DIRECTORY,
+          shell: true,
+          windowsHide: true,
+        }
+      );
+
+      let output = "";
+
+      proc.stderr.on("data", (data) => {
+        output += data.toString();
+      });
+
+      proc.on("close", () => {
+        // If we saw the "GraphServer not running" line, it's not active
+        if (output.includes("GraphServer not running")) {
+          resolve(false);
+        } else {
+          resolve(true); // no error = graph server likely running
+        }
+      });
+
+      proc.on("error", () => resolve(false));
+    });
+
+    client.on("error", () => resolve(false));
+    client.on("timeout", () => {
+      client.destroy();
+      resolve(false);
+    });
+  });
+}
+
+app.get("/graph-services", async (req, res) => {
+  const portsToCheck = Array.from({ length: 11 }, (_, i) => 25978 + i); // test port range 25978–25988
+  const results = await Promise.all(
+    portsToCheck.map(async (port) => {
+      const running = await isEzmsgGraphServerRunning(port);
+      return running ? port : null;
+    })
+  );
+
+  const activePorts = results.filter((p) => p !== null);
+  res.json({ ports: activePorts });
+});
 
 app.get("/graph", (req, res) => {
   const shouldProfile = req.query.profiling === "true";

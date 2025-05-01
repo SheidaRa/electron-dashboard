@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import TopBar from "./components/TopBar.jsx";
+import GraphServiceSelector from "./components/GraphServiceSelector.jsx";
 import Sidebar from "./components/Sidebar.jsx";
 import PipelineConfig from "./components/PipelineConfig.jsx";
 import MetricsSidebar from "./components/MetricsSidebar.jsx";
@@ -15,6 +15,9 @@ export default function App() {
   const [logs, setLogs] = useState([]);
 
   const [homedir, setHomedir] = useState("");
+
+  const [availableGraphs, setAvailableGraphs] = useState([]);
+  const [selectedGraph, setSelectedGraph] = useState(null);
 
   useEffect(() => {
     if (window.electronAPI?.getHomedir) {
@@ -87,6 +90,12 @@ export default function App() {
     }
   };
 
+  useEffect(() => {
+    fetch("http://localhost:1205/graph-services")
+      .then((res) => res.json())
+      .then((data) => setAvailableGraphs(data.ports));
+  }, []);
+
   return (
     <div className="min-h-screen bg-gray-100 text-gray-900 flex flex-col">
       {/* Top Bar */}
@@ -146,6 +155,11 @@ export default function App() {
                   {isGraphStyled ? "OFF" : "ON"}
                 </button>
               </div>
+              <GraphServiceSelector
+                availableGraphs={availableGraphs}
+                selectedGraph={selectedGraph}
+                onChange={setSelectedGraph}
+              />
             </div>
 
             {/* Right Sidebar */}
