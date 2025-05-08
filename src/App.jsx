@@ -6,6 +6,7 @@ import MetricsSidebar from "./components/MetricsSidebar.jsx";
 import EventLog from "./components/EventLog.jsx";
 import { fetchGraph } from "./components/MermaidDiagram.jsx";
 import { ChevronDown } from "lucide-react";
+import PipelineSelector from "./components/PipelineSelector.jsx";
 
 export default function App() {
   const [graphDefinition, setGraphDefinition] = useState("");
@@ -18,6 +19,8 @@ export default function App() {
 
   const [availableGraphs, setAvailableGraphs] = useState([]);
   const [selectedGraph, setSelectedGraph] = useState(null);
+
+  const [selectedPipeline, setSelectedPipeline] = useState(null);
 
   useEffect(() => {
     if (window.electronAPI?.getHomedir) {
@@ -63,6 +66,8 @@ export default function App() {
   }, []);
 
   const handleFetchGraph = () => {
+
+    console.log(selectedPipeline)
     const willStart = !isGraphRunning;
 
     setIsGraphRunning(willStart);
@@ -70,6 +75,7 @@ export default function App() {
       fetchGraph({
         setGraphDefinition,
         profiling: isGraphStyled,
+        pipeline: selectedPipeline
       });
     } else {
       setGraphDefinition("");
@@ -86,6 +92,7 @@ export default function App() {
       fetchGraph({
         setGraphDefinition,
         profiling: willStyle,
+        pipeline: selectedPipeline
       });
     }
   };
@@ -159,11 +166,17 @@ export default function App() {
                   {isGraphStyled ? "OFF" : "ON"}
                 </button>
               </div>
+
               <GraphServiceSelector
                 availableGraphs={availableGraphs}
                 selectedGraph={selectedGraph}
                 onChange={setSelectedGraph}
                 handleFetchGraphServices={handleFetchGraphServices}
+              />
+
+              <PipelineSelector
+                selectedPipeline={selectedPipeline}
+                onChange={setSelectedPipeline}
               />
             </div>
 

@@ -3,7 +3,7 @@ const express = require("express");
 const cors = require("cors");
 const fs = require("fs");
 const path = require("path");
-const { spawn, execSync } = require("child_process");
+const { spawn, exec } = require("child_process");
 const os = require("os");
 const WebSocket = require("ws");
 const http = require("http");
@@ -89,16 +89,46 @@ let currentPipelineProcess = null;
 let currentMermaidProcess = null;
 
 function killProcessAndChildren(pid) {
-  try {
-    if (process.platform === "win32") {
-      execSync(`taskkill /PID ${pid} /T /F`);
-    } else {
-      process.kill(-pid, "SIGTERM");
-    }
-    console.log(`Killed process tree for PID: ${pid}`);
-  } catch (err) {
-    console.warn("Failed to kill process:", err.message);
+  if (!pid) {
+    console.error("No PID provided to kill.");
+    return;
   }
+
+  console.log(`Attempting to kill process ${pid} and its child processes...`);
+
+  // Use pgrep to list all child processes of the given PID
+  exec(`pgrep -P ${pid}`, (err, stdout, stderr) => {
+    if (err) {
+      console.error(`Failed to list child processes of ${pid}:`, err.message);
+      return;
+    }
+
+    // Extract child process IDs
+    const childPIDs = stdout
+      .split("\n")
+      .filter((p) => p.trim() !== "")
+      .map((p) => parseInt(p.trim()));
+
+    console.log(`Child processes of ${pid}:`, childPIDs);
+
+    // Attempt to kill the parent process
+    try {
+      process.kill(pid);
+      console.log(`Successfully killed parent process ${pid}`);
+    } catch (err) {
+      console.error(`Failed to kill parent process ${pid}:`, err.message);
+    }
+
+    // Attempt to kill each child process
+    childPIDs.forEach((childPID) => {
+      try {
+        process.kill(childPID);
+        console.log(`Successfully killed child process ${childPID}`);
+      } catch (err) {
+        console.error(`Failed to kill child process ${childPID}:`, err.message);
+      }
+    });
+  });
 }
 
 async function isEzmsgGraphServerRunning(port) {
@@ -132,8 +162,10 @@ async function isEzmsgGraphServerRunning(port) {
           output.includes("GraphServer not running") ||
           output.includes("IncompleteReadError")
         ) {
+          console.log(`false: ${port}`)
           resolve(false);
         } else {
+          console.log(`true: ${port}`)
           resolve(true); // no error = graph server running
         }
       });
@@ -166,13 +198,16 @@ app.get("/graph-services", async (req, res) => {
 
 app.get("/graph", (req, res) => {
   const shouldProfile = req.query.profiling === "true";
+  const pipeline = req.query.pipeline;
   const pythonScriptPath = path.join(
     WORKING_DIRECTORY,
     "scripts_nbs",
-    "temp",
-    "ecog_preproc.py"
+    pipeline
   );
 
+  console.log("Pipeline Path:", pythonScriptPath);
+
+  // Kill existing pipeline and mermaid processes if running
   if (currentPipelineProcess) {
     console.log("Killing existing pipeline process...");
     killProcessAndChildren(currentPipelineProcess.pid);
@@ -200,81 +235,134 @@ app.get("/graph", (req, res) => {
   const pipelineProcess = spawn("uv", ["run", "python", pythonScriptPath], {
     cwd: WORKING_DIRECTORY,
     env,
-    stdio: "ignore",
+    stdio: ["ignore", "pipe", "pipe"], // Capture both stdout and stderr
     windowsHide: true,
   });
+
+  console.log(`Pipeline process started with PID: ${pipelineProcess.pid}`);
 
   pipelineProcess.unref();
   currentPipelineProcess = pipelineProcess;
 
-  const delay = shouldProfile ? 1000 : 0;
+  let bufferOutput = "";
+  let pipelineReady = false;
 
-  setTimeout(() => {
-    const ezmsgProcess = spawn(
-      "uv",
-      ["run", "ezmsg", "--address", "127.0.0.1:25978", "mermaid"],
-      {
-        cwd: WORKING_DIRECTORY,
-        windowsHide: true,
+  // Listen for pipeline readiness
+  pipelineProcess.stdout.on("data", (data) => {
+    const message = data.toString();
+    bufferOutput += message;
+    console.log("[Pipeline STDOUT]:", message);
+
+    if (message.includes("Loaded default config")) {
+      console.log("Pipeline is ready!");
+      pipelineReady = true;
+    }
+  });
+
+  pipelineProcess.stderr.on("data", (data) => {
+    const message = data.toString();
+    bufferOutput += message;
+    console.error("[Pipeline STDERR]:", data.toString());
+    if (message.includes("Loaded default config")) {
+      console.log("Pipeline is ready!");
+      pipelineReady = true;
+    }
+  });
+
+  // Monitor pipeline exit
+  pipelineProcess.on("close", (code) => {
+    console.log(`Pipeline process exited with code ${code}`);
+    currentPipelineProcess = null;
+  });
+
+  // Wait for the pipeline to be ready
+  const waitForPipeline = new Promise((resolve, reject) => {
+    const maxWaitTime = 60000; // 60 seconds
+    const startTime = Date.now();
+
+    const checkReady = setInterval(() => {
+      if (pipelineReady) {
+        clearInterval(checkReady);
+        resolve();
+      } else if (Date.now() - startTime > maxWaitTime) {
+        clearInterval(checkReady);
+        reject("Pipeline startup timeout.");
       }
-    );
+    }, 500);
+  });
 
-    currentMermaidProcess = ezmsgProcess;
+  // Start Mermaid after the pipeline is ready
+  waitForPipeline
+    .then(() => {
+      console.log("Starting Mermaid...");
+      const ezmsgProcess = spawn(
+        "uv",
+        ["run", "ezmsg", "--address", "127.0.0.1:25978", "mermaid"],
+        {
+          cwd: WORKING_DIRECTORY,
+          windowsHide: true,
+        }
+      );
 
-    let output = "";
+      currentMermaidProcess = ezmsgProcess;
+      let output = "";
 
-    ezmsgProcess.stdout.on("data", (data) => {
-      output += data.toString();
-      broadcastLog(`[ezmsg] ${data.toString()}`);
-    });
+      ezmsgProcess.stdout.on("data", (data) => {
+        output += data.toString();
+        console.log("[Mermaid STDOUT]:", data.toString());
+      });
 
-    ezmsgProcess.stderr.on("data", (data) => {
-      const log = `[ezmsg error] ${data.toString()}`;
-      console.error(log);
-      broadcastLog(log);
-    });
+      ezmsgProcess.stderr.on("data", (data) => {
+        const log = `[Mermaid STDERR]: ${data.toString()}`;
+        console.error(log);
+      });
 
-    ezmsgProcess.on("close", (code) => {
-      currentMermaidProcess = null;
-      if (code !== 0) {
-        return res
-          .status(500)
-          .send(`ezmsg command failed with exit code ${code}`);
-      }
-
-      if (!shouldProfile) {
-        return res.type("text/plain").send(output);
-      }
-
-      try {
-        if (!fs.existsSync(LOG_PATH)) {
-          return res.status(404).send("Profiler log not found.");
+      ezmsgProcess.on("close", (code) => {
+        currentMermaidProcess = null;
+        if (code !== 0) {
+          return res
+            .status(500)
+            .send(`Mermaid command failed with exit code ${code}`);
         }
 
-        const logText = fs.readFileSync(LOG_PATH, "utf8").trim();
-        const baseMermaid = output.trim().split("\n");
+        if (!shouldProfile) {
+          return res.type("text/plain").send(output);
+        }
 
-        const averages = parseLogFile(logText);
-        const elapsedValues = Object.values(averages).filter((v) => !isNaN(v));
-        const maxElapsed =
-          elapsedValues.length > 0 ? Math.max(...elapsedValues) : 1.0;
+        // Process profiling data if profiling is enabled
+        try {
+          if (!fs.existsSync(LOG_PATH)) {
+            return res.status(404).send("Profiler log not found.");
+          }
 
-        const styleLines = Object.entries(averages)
-          .filter(([_, avg]) => !isNaN(avg))
-          .map(([topic, avg]) => {
-            const nodeId = topic.split("/").pop().toLowerCase();
-            const color = getColor(avg, maxElapsed);
-            return `  style ${nodeId} fill:${color}`;
-          });
+          const logText = fs.readFileSync(LOG_PATH, "utf8").trim();
+          const baseMermaid = output.trim().split("\n");
 
-        const finalMermaid = [...baseMermaid, ...styleLines].join("\n");
-        res.type("text/plain").send(finalMermaid);
-      } catch (err) {
-        console.error("Styling failed:", err);
-        return res.status(500).send("Failed to style graph.");
-      }
+          const averages = parseLogFile(logText);
+          const elapsedValues = Object.values(averages).filter((v) => !isNaN(v));
+          const maxElapsed =
+            elapsedValues.length > 0 ? Math.max(...elapsedValues) : 1.0;
+
+          const styleLines = Object.entries(averages)
+            .filter(([_, avg]) => !isNaN(avg))
+            .map(([topic, avg]) => {
+              const nodeId = topic.split("/").pop().toLowerCase();
+              const color = getColor(avg, maxElapsed);
+              return `  style ${nodeId} fill:${color}`;
+            });
+
+          const finalMermaid = [...baseMermaid, ...styleLines].join("\n");
+          res.type("text/plain").send(finalMermaid);
+        } catch (err) {
+          console.error("Styling failed:", err);
+          res.status(500).send("Failed to style graph.");
+        }
+      });
+    })
+    .catch((err) => {
+      console.error("Pipeline failed:", err);
+      res.status(500).send("Pipeline failed to start in time.");
     });
-  }, delay);
 });
 
 // Dummy endpoints

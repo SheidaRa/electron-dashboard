@@ -2,10 +2,10 @@ import React, { useEffect, useRef } from "react";
 import mermaid from "mermaid";
 import svgPanZoom from "svg-pan-zoom";
 
-export function fetchGraph({ setGraphDefinition, profiling = false }) {
+export function fetchGraph({ setGraphDefinition, profiling = false, pipeline = "" }) {
   const url = profiling
-    ? "http://localhost:1205/graph?profiling=true"
-    : "http://localhost:1205/graph";
+    ? `http://localhost:1205/graph?profiling=true&pipeline=${encodeURIComponent(pipeline)}`
+    : `http://localhost:1205/graph?pipeline=${encodeURIComponent(pipeline)}`;
 
   fetch(url)
     .then((response) => response.text())

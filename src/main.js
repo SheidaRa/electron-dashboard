@@ -31,7 +31,7 @@ const createWindow = () => {
     },
     autoHideMenuBar: true,
   });
-
+  // mainWindow.webContents.openDevTools();
   mainWindow.loadURL(MAIN_WINDOW_WEBPACK_ENTRY);
 };
 
